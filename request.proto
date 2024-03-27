@@ -1,0 +1,11 @@
+syntax = "proto3";
+option go_package = "fserver-udp/proto";
+
+enum Verb {
+  GET = 0;
+}
+
+message Message {
+  string file_path = 1;
+  Verb verb = 2;
+}
