@@ -22,10 +22,6 @@ Check [protobuf file](./messages.proto) to known which type data are encoded.
   ...31 bytes -> Protobuf encoded data
 ```
 
-```env
-UDP_BIND_ADDRESS = "0.0.0.0:2224"
-```
-
 ## Docker
 to build and test easilly just run:
 ```shell
