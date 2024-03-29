@@ -28,6 +28,7 @@ type Token struct {
 type TokenizedFile struct {
 	CheckSum string           // file sha256 checksum
 	Buffer   []byte           // file content
+	Size     int              // file size
 	Tokens   map[string]Token // chunk tokens
 }
 
@@ -41,9 +42,11 @@ type Worker struct {
 func (w *Worker) sendConfirmationPacket(result msg.Result, token string) {
 	confirmation := msg.Confirmation{Result: result, Token: token}
 	cBuffer, _ := pb.Marshal(&confirmation)
-	pBuffer := make([]byte, BUFF_SIZE+1)
+
+	pBuffer := make([]byte, BUFF_SIZE)
 	pBuffer[0] = byte(msg.Verb_CONFIRMATION)
 	copy(pBuffer[1:], cBuffer)
+
 	(*w.Socket).WriteTo(cBuffer, w.Addr)
 }
 
@@ -66,6 +69,10 @@ func (w *Worker) sendFilePacket(hash string) {
 	token := w.File.Tokens[hash]
 	block := token.Index + CHUNK_SIZE
 
+	if block > w.File.Size {
+		block = w.File.Size
+	}
+
 	chunkBuffer, _ := pb.Marshal(
 		&msg.FileChunk{
 			Chunk:    w.File.Buffer[token.Index:block],
@@ -73,7 +80,7 @@ func (w *Worker) sendFilePacket(hash string) {
 			CheckSum: w.File.CheckSum,
 		},
 	)
-	pBuffer := make([]byte, BUFF_SIZE+1)
+	pBuffer := make([]byte, CHUNK_SIZE+1)
 	pBuffer[0] = byte(msg.Verb_RESPONSE)
 	copy(pBuffer[1:], chunkBuffer)
 
@@ -99,12 +106,12 @@ func (w *Worker) tokenizeFile(buffer []byte) {
 
 	w.File = TokenizedFile{
 		Buffer: buffer,
+		Size:   size,
 		Tokens: tokens,
 	}
 }
 
 func (w *Worker) readFile(buffer []byte) ([]byte, msg.Result, error) {
-
 	request := msg.RequestFile{}
 	if err := pb.Unmarshal(bytes.Trim(buffer, "\x00"), &request); err != nil {
 		return nil, msg.Result_INVALID_PACKET_FORMAT, err
