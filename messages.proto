@@ -1,0 +1,58 @@
+syntax = "proto3";
+option go_package = "fserver-udp/proto";
+
+/* Header byte */
+enum Verb {
+  REQUEST = 0;
+  RESPONSE = 1;
+  CONFIRMATION = 2;
+}
+
+/* Possible confirmation status */
+enum Result {
+  OK = 0;
+  FILE_NOT_FOUND = 1;
+  INVALID_PACKET_FORMAT = 2;
+  ERROR_CHECK_SUM = 3;
+  PACKET_MISS = 4;
+  INVALID_TOKEN = 5;
+}
+
+/*
+  request file message, client must send
+  0 -> REQUEST
+  [0, protobuf data encoded]
+
+  @file_path file absolute path
+*/
+message RequestFile {
+  string file_path = 1;
+}
+
+/*
+  file chunk message, server must send after a request
+  1 -> RESPONSE
+  [1, protobuf data encoded]
+
+  @chunk 255 bytes file chunk
+  @token token chunk identifier
+  @check_sum sha256 file checksum
+*/
+message FileChunk {
+  bytes chunk = 1;
+  string token = 2;
+  string check_sum = 3;
+}
+
+/*
+  confirmation message, basic server and client verification
+  2 -> RESPONSE
+  [2, protobuf data encoded]
+
+  @result confirmation status
+  @token  token chunk identifier
+*/
+message Confirmation {
+  Result result = 1;
+  string token = 2;
+}
