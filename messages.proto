@@ -16,6 +16,7 @@ enum Result {
   ERROR_CHECK_SUM = 3;
   PACKET_MISS = 4;
   INVALID_TOKEN = 5;
+  VALID_CHECKSUM = 6;
 }
 
 /*
@@ -55,4 +56,26 @@ message FileChunk {
 message Confirmation {
   Result result = 1;
   string token = 2;
+}
+
+/*
+  @index    buffer chunk index
+  @received chunk sent confirmation
+*/
+message Token {
+  uint32 index = 1;
+  bool received = 2;
+}
+
+/*
+  @check_sum file check sum
+  @buffer    file content
+  @size      file size
+  @tokens    file tokenized chunks
+*/  
+message TokenizableFile {
+  string check_sum = 1;
+  bytes buffer = 2;
+  uint32 size = 3;
+  map<string, Token> tokens = 4;
 }

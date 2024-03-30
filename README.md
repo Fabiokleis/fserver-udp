@@ -8,7 +8,7 @@ see golang implementation in https://pkg.go.dev/google.golang.org/protobuf
 
 The protocol are divided in two sections, first byte is reserved to the packet identification byte, next bytes are reserved for data.
 Check [protobuf file](./messages.proto) to known which type data are encoded.
-```golang
+```protobuf
   Server packet: [Header|Protobuf...] 256 bytes
   header byte types:
   1 -> RESPONSE     // file chunk
@@ -21,6 +21,11 @@ Check [protobuf file](./messages.proto) to known which type data are encoded.
   2 -> CONFIRMATION // result
   ...31 bytes -> Protobuf encoded data
 ```
+
+## Client
+in order to create a client implementation, you must have to send a request message to server containing the file name, 
+start receiving file chunks from server and send confirmation for each packet. All needed messages types are described 
+in [protobuf file](./messages.proto), so every programming languague that has protocol buffers compiler could be a client.
 
 ## Docker
 to build and test easilly just run:
