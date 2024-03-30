@@ -29,6 +29,11 @@ now you can reconstruct file and generate sha256 checksum to validate it, if val
 a confirmation of the checksum to the server. All needed messages types are described in [protobuf file](./messages.proto),
 so every programming languague that has protocol buffers compiler could be a client.
 
+## Communication
+
+![flux](https://github.com/Fabiokleis/fserver-udp/assets/66813406/cc5c9385-f0df-47b1-bd5b-954972d8de7a)
+
+
 ## Docker
 to build and test easilly just run:
 ```shell
