@@ -23,9 +23,11 @@ Check [protobuf file](./messages.proto) to known which type data are encoded.
 ```
 
 ## Client
-in order to create a client implementation, you must have to send a request message to server containing the file name, 
-start receiving file chunks from server and send confirmation for each packet. All needed messages types are described 
-in [protobuf file](./messages.proto), so every programming languague that has protocol buffers compiler could be a client.
+in order to create a client implementation you must send a request message to server containing the file name, then 
+start receiving file chunks from server and send confirmation for each packet. After all packets was received, 
+now you can reconstruct file and generate sha256 checksum to validate it, if validation succeed you must send
+a confirmation of the checksum to the server. All needed messages types are described in [protobuf file](./messages.proto),
+so every programming languague that has protocol buffers compiler could be a client.
 
 ## Docker
 to build and test easilly just run:
