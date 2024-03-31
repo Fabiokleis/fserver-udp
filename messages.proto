@@ -24,7 +24,7 @@ enum Result {
   0 -> REQUEST
   [0, protobuf data encoded]
 
-  @file_path file absolute path
+  @param file_path file absolute path
 */
 message RequestFile {
   string file_path = 1;
@@ -35,9 +35,8 @@ message RequestFile {
   1 -> RESPONSE
   [1, protobuf data encoded]
 
-  @chunk 255 bytes file chunk
-  @token token chunk identifier
-  @check_sum sha256 file checksum
+  @param chunk 128 bytes file chunk
+  @param token chunk hash identifier
 */
 message FileChunk {
   bytes chunk = 1;
@@ -46,11 +45,11 @@ message FileChunk {
 
 /*
   confirmation message, basic server and client verification
-  2 -> RESPONSE
+  2 -> CONFIRMATION
   [2, protobuf data encoded]
 
-  @result confirmation status
-  @token  token chunk identifier
+  @param result confirmation status
+  @param token  token chunk identifier, checksum if result = 6
 */
 message Confirmation {
   Result result = 1;
