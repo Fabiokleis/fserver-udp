@@ -1,7 +1,7 @@
 # fserver-udp
 udp file server, transfer files over udp socket.
 
-this project uses protobuf to enconde and decode messages: https://protobuf.dev/
+this project uses protobuf to encode and decode messages: https://protobuf.dev/
 see golang implementation in https://pkg.go.dev/google.golang.org/protobuf
 
 ## Protocol
