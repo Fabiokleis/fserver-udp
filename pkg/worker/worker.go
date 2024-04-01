@@ -165,7 +165,7 @@ func (w *Worker) Execute() {
 					return // exit worker
 
 				case msg.Result_FILE_NOT_FOUND:
-					//fmt.Printf("failed to read file, cause %s\n", err)
+					slog.Error("failed to read file", "address", w.Addr.String(), "error", err)
 					w.sendConfirmationPacket(result, "")
 					return // exit worker
 
