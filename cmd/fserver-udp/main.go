@@ -1,8 +1,8 @@
 package main
 
 import (
-	"fmt"
 	w "fserver-udp/server/pkg/worker"
+	"log/slog"
 	"net"
 	"os"
 )
@@ -16,7 +16,7 @@ func monitor(workers map[string]*w.Worker) {
 	for {
 		for addr, worker := range workers {
 			if (*worker).Done {
-				fmt.Printf("[%s] exiting worker", addr)
+				slog.Info("exiting worker", "address", addr)
 				delete(workers, addr)
 			}
 		}
@@ -35,7 +35,7 @@ func server(socket *net.UDPConn) {
 	for {
 		n, addr, err := (*socket).ReadFrom(packet)
 		if err != nil {
-			fmt.Printf("failed to read udp client socket %s, cause %s\n", addr, err)
+			slog.Error("failed to read udp client socket", "address", addr, "error", err)
 			continue
 		}
 
@@ -59,19 +59,25 @@ func server(socket *net.UDPConn) {
 }
 
 func main() {
-	fmt.Println("starting udp listener", UDP_BIND_ADDRESS)
+
+	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.Level(-4)}))
+
+	slog.SetDefault(logger)
+
+	slog.Info("starting udp listener", "address", UDP_BIND_ADDRESS)
 
 	udpAddr, err := net.ResolveUDPAddr("udp", UDP_BIND_ADDRESS)
 
 	if err != nil {
-		fmt.Printf("failed to resolve udp address, cause %s\n", err)
+		slog.Error("failed to resolve udp address", "error", err)
 		os.Exit(1)
 	}
 	listener, err := net.ListenUDP("udp", udpAddr)
 
 	if err != nil {
-		fmt.Printf("failed starting udp listener, cause %s\n", err)
+		slog.Error("failed starting udp listener", "error", err)
 		os.Exit(1)
 	}
+
 	server(listener)
 }
