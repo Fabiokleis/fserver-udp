@@ -27,6 +27,15 @@ func (tF *TokenizableFile) FindToken(hash string) *Token {
 	return nil
 }
 
+func (tF *TokenizableFile) FindNotReceivedToken() *Token {
+	for _, t := range tF.Tokens {
+		if !t.Received {
+			return t
+		}
+	}
+	return nil
+}
+
 func (tF *TokenizableFile) PushToken(idx int, received bool) {
 	tF.Tokens = append(tF.Tokens, &Token{Index: idx, Received: received})
 }
