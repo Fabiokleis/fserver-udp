@@ -24,13 +24,16 @@ Check [protobuf file](./messages.proto) to known which type data are encoded.
 
 ## Client
 in order to create a client implementation you must send a request message to server containing the file name, then 
-start receiving file chunks from server and send confirmation for each packet. After all packets was received, 
-now you can reconstruct file and generate sha256 checksum to validate it, if validation succeed you must send
-a confirmation of the checksum to the server. All needed messages types are described in [protobuf file](./messages.proto),
-so every programming languague that has protocol buffers compiler could be a client.
+start receiving file chunks from server and send confirmation for each packet, server will wait to send next packets
+until a confirmation packet, if a packet was losted, client must send a missing packet confirmation and then server 
+will return sending next packets. After all packets was received, now you can reconstruct file and generate sha256 
+checksum to validate it, if validation succeed you must send a confirmation of the checksum to the server. All needed
+messages types are described in [protobuf file](./messages.proto), so every programming languague that has protocol 
+buffers compiler could be a client.
 
 ## Communication flow
-![flux(1)](https://github.com/Fabiokleis/fserver-udp/assets/66813406/6f2ca1be-9c07-467e-88bb-cd92fbfa03f5)
+![flux](https://github.com/Fabiokleis/fserver-udp/assets/66813406/b078467e-ee14-4a44-8fc0-e47ff57fff95)
+
 
 ## Docker
 to build and test easilly just run:
@@ -40,6 +43,7 @@ docker build -t fserver-udp .
 ```shell
 docker container run -d -p 2224:2224 --name fserver fserver-udp
 ```
+
 
 ## Build
 setup golang protobuf compiler by running:
