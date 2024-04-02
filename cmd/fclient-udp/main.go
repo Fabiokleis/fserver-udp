@@ -7,21 +7,44 @@ import (
 	"os"
 	"time"
 
+	"flag"
 	c "fserver-udp/server/pkg/client"
+	"math/rand"
 )
 
 const (
 	UDP_SERVER_ADDRESS = "0.0.0.0:2224"
-	FILE               = "messages.proto"
 	MAX_PACKET_SIZE    = 256
 	RESPONSE_MAX_TIME  = 2
 )
 
 func main() {
 
-	fmt.Println("starting udp client", UDP_SERVER_ADDRESS)
+	bind := flag.String("bind", "", "file server host:port")
+	file := flag.String("file", "", "file absolute path")
+	missPacket := flag.Bool("miss", false, "force to miss one upd packet")
 
-	conn, err := net.Dial("udp", UDP_SERVER_ADDRESS)
+	flag.Parse()
+
+	if *bind == "" {
+		fmt.Println("missing `--bind` flag")
+		os.Exit(1)
+	}
+
+	if *file == "" {
+		fmt.Println("missing `--file` flag")
+		os.Exit(1)
+	}
+
+	missed := 0
+	if *missPacket == true {
+		missed = rand.Intn(3) + 1
+		fmt.Println("client will miss packet", missed)
+	}
+
+	fmt.Println("starting udp client", *bind)
+
+	conn, err := net.Dial("udp", *bind)
 	if err != nil {
 		fmt.Println("cannot start udp connection, cause", err)
 		os.Exit(1)
@@ -31,7 +54,7 @@ func main() {
 
 	client := c.Client{
 		Socket:            &conn,
-		OutputFile:        FILE + ".copy",
+		OutputFile:        *file + ".copy",
 		Transfering:       false,
 		MissPacketChannel: make(chan bool),
 		File: f.TokenizableFile{
@@ -44,7 +67,7 @@ func main() {
 	timer := time.NewTimer(time.Duration(RESPONSE_MAX_TIME) * time.Second)
 	packet := make([]byte, MAX_PACKET_SIZE)
 
-	client.RequestFile(FILE)
+	client.RequestFile(*file)
 	go client.KeepCheckingServer()
 
 	for client.Transfering {
