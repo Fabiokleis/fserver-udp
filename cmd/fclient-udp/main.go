@@ -70,8 +70,8 @@ func main() {
 
 	go client.KeepCheckingServer(*missPacket, missed)
 
-	conn.SetReadDeadline(time.Now().Add(time.Second * MAX_TIMEOUT))
 	for client.Transfering {
+		conn.SetReadDeadline(time.Now().Add(time.Second * MAX_TIMEOUT))
 		n, err := conn.Read(packet)
 		if err != nil {
 			break

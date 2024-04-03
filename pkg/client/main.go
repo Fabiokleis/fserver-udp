@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	RESEND_MAX_TIME = 1
+	RESEND_MAX_TIME = 2
 )
 
 type Client struct {
@@ -149,6 +149,7 @@ func (c *Client) KeepCheckingServer(miss bool, missed int) {
 					break // miss packet
 				}
 			}
+
 			c.readPacket(packet)
 
 			break

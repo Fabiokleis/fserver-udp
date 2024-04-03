@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	TIMEOUT    = 5   // secs
+	TIMEOUT    = 10  // secs
 	CHUNK_SIZE = 128 // file chunk bytes
 )
 
