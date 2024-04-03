@@ -9,11 +9,11 @@ see golang implementation in https://pkg.go.dev/google.golang.org/protobuf
 The protocol are divided in two sections, first byte is reserved to the packet identification byte, next bytes are reserved for data.
 Check [protobuf file](./messages.proto) to known which type data are encoded.
 ```protobuf
-  Server packet: [Header|Protobuf...] 256 bytes
+  Server packet: [Header|Protobuf...] 1024 bytes
   header byte types:
   1 -> RESPONSE     // file chunk
   2 -> CONFIRMATION // result
-  ...255 bytes -> Protobuf encoded data
+  ...1024 bytes -> Protobuf encoded data
 
   Client packet: [Header|Protobuf...] 32 bytes
   header byte types:
