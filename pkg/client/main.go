@@ -8,18 +8,23 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/codingsince1985/checksum"
 	pb "google.golang.org/protobuf/proto"
 )
 
+const (
+	RESEND_MAX_TIME = 1
+)
+
 type Client struct {
-	Socket            *net.Conn         // client connection
-	File              f.TokenizableFile // to reconstruct file
-	OutputFile        string            // transfered file path
-	Transfering       bool              // quit control
-	MissPacketChannel chan bool         // check if a packet was missed
-	C                 int               // force miss packet
+	Socket        *net.Conn         // client connection
+	File          f.TokenizableFile // to reconstruct file
+	OutputFile    string            // transfered file path
+	Transfering   bool              // quit control
+	PacketChannel chan []byte       // check if a packet was read
+	C             int
 }
 
 func (c *Client) RequestFile(file string) {
@@ -94,11 +99,12 @@ func (c *Client) verifyConfirmation(confirm *msg.Confirmation) {
 			if err != nil {
 				fmt.Println(err)
 			}
-			break
+			return
 		}
+		c.Transfering = false // stop reading packets
 		fmt.Println("sha256 checksum", c.File.CheckSum)
 		fmt.Println("file transfering succeed")
-		c.Transfering = false // stop reading packets
+
 		break
 	case msg.Result_OK, msg.Result_INVALID_PACKET_FORMAT:
 	default:
@@ -117,13 +123,34 @@ func (c *Client) sendMissPacket() {
 	(*c.Socket).Write(buffer)
 }
 
-func (c *Client) KeepCheckingServer() {
+func (c *Client) KeepCheckingServer(miss bool, missed int) {
+
+	defer func() {
+		close(c.PacketChannel)
+	}()
+
+	timer := time.NewTimer(time.Duration(RESEND_MAX_TIME) * time.Second)
 	for c.Transfering {
 		select {
-		case check := <-c.MissPacketChannel:
-			if check {
-				c.sendMissPacket()
+		case <-timer.C:
+			//fmt.Println("calling")
+			c.sendMissPacket()
+			timer.Reset(time.Duration(RESEND_MAX_TIME) * time.Second)
+			break
+		case packet := <-c.PacketChannel:
+
+			timer.Reset(time.Duration(RESEND_MAX_TIME) * time.Second)
+
+			if miss {
+				if c.C < missed {
+					c.C++
+				} else if c.C == missed {
+					c.C = missed + 1
+					break // miss packet
+				}
 			}
+			c.readPacket(packet)
+
 			break
 		default:
 			break
@@ -131,7 +158,7 @@ func (c *Client) KeepCheckingServer() {
 	}
 }
 
-func (c *Client) ReadPacket(buffer []byte) {
+func (c *Client) readPacket(buffer []byte) {
 
 	switch int(buffer[0]) {
 	case int(msg.Verb_RESPONSE):

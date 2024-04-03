@@ -15,7 +15,7 @@ import (
 const (
 	UDP_SERVER_ADDRESS = "0.0.0.0:2224"
 	MAX_PACKET_SIZE    = 256
-	RESPONSE_MAX_TIME  = 2
+	MAX_TIMEOUT        = 5
 )
 
 func main() {
@@ -38,7 +38,7 @@ func main() {
 
 	missed := 0
 	if *missPacket == true {
-		missed = rand.Intn(3) + 1
+		missed = rand.Intn(5) + 1 // random packet to miss
 		fmt.Println("client will miss packet", missed)
 	}
 
@@ -53,10 +53,10 @@ func main() {
 	defer conn.Close()
 
 	client := c.Client{
-		Socket:            &conn,
-		OutputFile:        *file + ".copy",
-		Transfering:       false,
-		MissPacketChannel: make(chan bool),
+		Socket:        &conn,
+		OutputFile:    *file + ".copy",
+		Transfering:   false,
+		PacketChannel: make(chan []byte),
 		File: f.TokenizableFile{
 			CheckSum: "",
 			Size:     0,
@@ -64,29 +64,22 @@ func main() {
 		},
 	}
 
-	timer := time.NewTimer(time.Duration(RESPONSE_MAX_TIME) * time.Second)
 	packet := make([]byte, MAX_PACKET_SIZE)
 
 	client.RequestFile(*file)
-	go client.KeepCheckingServer()
 
+	go client.KeepCheckingServer(*missPacket, missed)
+
+	conn.SetReadDeadline(time.Now().Add(time.Second * MAX_TIMEOUT))
 	for client.Transfering {
 		n, err := conn.Read(packet)
 		if err != nil {
-			fmt.Println("failed to read udp socket, cause", err)
 			break
 		}
+
 		//fmt.Println("packet: ", packet[:n])
 
-		select {
-		case <-timer.C: // after 2s without receiving packets, request missing packet
-			client.MissPacketChannel <- true
-			timer.Reset(time.Duration(RESPONSE_MAX_TIME) * time.Second)
-			break
-		default:
-			break
-		}
-
-		client.ReadPacket(packet[:n])
+		client.PacketChannel <- packet[:n]
+		//fmt.Println(client.Transfering)
 	}
 }
