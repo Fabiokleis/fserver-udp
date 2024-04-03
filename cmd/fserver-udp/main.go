@@ -5,31 +5,65 @@ import (
 	"log/slog"
 	"net"
 	"os"
+	"sync"
 )
 
 const (
 	UDP_BIND_ADDRESS = "0.0.0.0:2224"
-	MAX_PACKET_SIZE  = 32
+	MAX_PACKET_SIZE  = 32 // client only send short messages
 )
 
-func monitor(workers map[string]*w.Worker) {
+type Server struct {
+	mu      sync.Mutex
+	Workers map[string]*w.Worker
+}
+
+func (s *Server) monitor() {
 	for {
-		for addr, worker := range workers {
-			if (*worker).Done {
+		s.mu.Lock()
+		for addr, worker := range s.Workers {
+			if worker.Done {
+				delete(s.Workers, addr)
 				slog.Info("exiting worker", "address", addr)
-				delete(workers, addr)
 			}
 		}
+		s.mu.Unlock()
+
 	}
+}
+
+func (s *Server) sendPacket(addr string, packet []byte) bool {
+	s.mu.Lock()
+	if w, ok := s.Workers[addr]; ok {
+		w.PacketChannel <- packet // send new packet
+		s.mu.Unlock()
+		return true
+	}
+	s.mu.Unlock()
+	return false
+}
+
+func (s *Server) addWorker(worker w.Worker, packet []byte) {
+	s.mu.Lock()
+
+	s.Workers[worker.Addr.String()] = &worker
+
+	// start a new worker
+	go worker.Execute()
+	worker.PacketChannel <- packet
+
+	s.mu.Unlock()
 }
 
 func server(socket *net.UDPConn) {
 
 	defer (*socket).Close()
 
-	var workers = map[string]*w.Worker{}
+	server := Server{
+		Workers: map[string]*w.Worker{},
+	}
 
-	go monitor(workers)
+	go server.monitor()
 
 	packet := make([]byte, MAX_PACKET_SIZE)
 	for {
@@ -39,22 +73,15 @@ func server(socket *net.UDPConn) {
 			continue
 		}
 
-		if w, ok := workers[addr.String()]; ok {
-			w.PacketChannel <- packet[:n] // send new packet
-			continue
+		if !server.sendPacket(addr.String(), packet[:n]) {
+			server.addWorker(w.Worker{
+				Socket:        socket,
+				Addr:          addr,
+				PacketChannel: make(chan []byte),
+				Waiting:       false,
+				Done:          false,
+			}, packet[:n])
 		}
-
-		// start a new worker
-		worker := &w.Worker{
-			Socket:        socket,
-			Addr:          addr,
-			PacketChannel: make(chan []byte),
-			Waiting:       false,
-			Done:          false,
-		}
-		workers[addr.String()] = worker
-		go worker.Execute()
-		worker.PacketChannel <- packet[:n]
 	}
 }
 

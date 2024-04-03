@@ -15,8 +15,8 @@ import (
 )
 
 const (
-	TIMEOUT    = 10  // secs
-	CHUNK_SIZE = 128 // file chunk bytes
+	TIMEOUT    = 10   // secs
+	CHUNK_SIZE = 1024 // file chunk bytes
 )
 
 type Worker struct {
@@ -68,7 +68,7 @@ func (w *Worker) sendFilePacket(token *f.Token) {
 		},
 	)
 
-	pBuffer := make([]byte, len(chunkBuffer)+1) // < 256
+	pBuffer := make([]byte, len(chunkBuffer)+1) // < 1500
 	pBuffer[0] = byte(msg.Verb_RESPONSE)
 	copy(pBuffer[1:], chunkBuffer)
 
@@ -200,7 +200,7 @@ func (w *Worker) Execute() {
 						slog.Error("cannot confirm packet, failed to find token hash", "address", w.Addr.String(), "token", confirm.Token, "error", err)
 						w.sendConfirmationPacket(msg.Result_INVALID_TOKEN, confirm.Token)
 					}
-					slog.Info("received packet", "address", w.Addr.String(), "token", confirm.Token)
+					//slog.Info("received packet", "address", w.Addr.String(), "token", confirm.Token)
 					break
 				case msg.Result_PACKET_MISS:
 					w.resendLastPacket(confirm.Token)

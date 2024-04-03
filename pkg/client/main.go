@@ -6,6 +6,7 @@ import (
 	msg "fserver-udp/server/pkg/proto"
 	"net"
 	"os"
+	"path"
 	"strconv"
 	"strings"
 	"time"
@@ -27,8 +28,14 @@ type Client struct {
 	C             int
 }
 
+func (c *Client) setFileName() {
+	_, filePath := path.Split(c.OutputFile)
+	c.OutputFile = filePath + ".copy"
+}
+
 func (c *Client) RequestFile(file string) {
 	c.Transfering = true
+	c.setFileName()
 	request := msg.RequestFile{FilePath: file}
 	rBuffer, _ := pb.Marshal(&request)
 
