@@ -14,8 +14,8 @@ import (
 
 const (
 	UDP_SERVER_ADDRESS = "0.0.0.0:2224"
-	MAX_PACKET_SIZE    = 256
-	MAX_TIMEOUT        = 5
+	MAX_PACKET_SIZE    = 1100 // 1024 file chunk + proto encoding + safety
+	MAX_TIMEOUT        = 1
 )
 
 func main() {
@@ -54,7 +54,7 @@ func main() {
 
 	client := c.Client{
 		Socket:        &conn,
-		OutputFile:    *file + ".copy",
+		OutputFile:    *file,
 		Transfering:   false,
 		PacketChannel: make(chan []byte),
 		File: f.TokenizableFile{
@@ -68,7 +68,7 @@ func main() {
 
 	client.RequestFile(*file)
 
-	go client.KeepCheckingServer(*missPacket, missed)
+	go client.KeepCheckingServer(*missPacket, 1)
 
 	for client.Transfering {
 		conn.SetReadDeadline(time.Now().Add(time.Second * MAX_TIMEOUT))
