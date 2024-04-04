@@ -54,7 +54,6 @@ func main() {
 
 	client := c.Client{
 		Socket:        &conn,
-		OutputFile:    *file,
 		Transfering:   false,
 		PacketChannel: make(chan []byte),
 		File: f.TokenizableFile{

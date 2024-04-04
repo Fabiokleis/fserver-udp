@@ -5,7 +5,6 @@ import (
 	f "fserver-udp/server/pkg/file"
 	msg "fserver-udp/server/pkg/proto"
 	"net"
-	"os"
 	"path"
 	"strconv"
 	"strings"
@@ -22,26 +21,23 @@ const (
 type Client struct {
 	Socket        *net.Conn         // client connection
 	File          f.TokenizableFile // to reconstruct file
-	OutputFile    string            // transfered file path
 	Transfering   bool              // quit control
 	PacketChannel chan []byte       // check if a packet was read
 	C             int
 }
 
-func (c *Client) setFileName() {
-	_, filePath := path.Split(c.OutputFile)
-	c.OutputFile = filePath + ".copy"
-}
-
 func (c *Client) RequestFile(file string) {
 	c.Transfering = true
-	c.setFileName()
-	request := msg.RequestFile{FilePath: file}
+
+	request := msg.RequestFile{FilePath: path.Clean(file)}
 	rBuffer, _ := pb.Marshal(&request)
 
 	buffer := make([]byte, len(rBuffer)+1)
 	buffer[0] = byte(msg.Verb_REQUEST)
 	copy(buffer[1:], rBuffer)
+
+	_, filePath := path.Split(file)
+	c.File.CreateFile(filePath + ".copy")
 
 	(*c.Socket).Write(buffer)
 }
@@ -71,19 +67,14 @@ func (c *Client) readFileChunkPacket(buffer []byte) (*msg.FileChunk, error) {
 	}
 
 	c.File.PushToken(idx, true)
-	c.File.Size += len(fileChunk.Chunk)
-	c.File.Buffer = append(c.File.Buffer, fileChunk.Chunk...)
+	c.File.WriteChunk(fileChunk.Chunk)
 
 	return &fileChunk, nil
 }
 
 func (c *Client) validateCheckSum(hash string) error {
 
-	err := os.WriteFile(c.OutputFile, c.File.Buffer, 0644)
-	if err != nil {
-		return err
-	}
-	sha256, _ := checksum.SHA256sum(c.OutputFile)
+	sha256, _ := checksum.SHA256sum(c.File.Path())
 
 	if sha256 == hash {
 		c.File.CheckSum = sha256
@@ -102,10 +93,9 @@ func (c *Client) verifyConfirmation(confirm *msg.Confirmation) {
 	case msg.Result_VALID_CHECKSUM:
 		if err := c.validateCheckSum(confirm.Token); err != nil {
 			fmt.Println(err)
-			err := os.Remove(c.OutputFile)
-			if err != nil {
-				fmt.Println(err)
-			}
+			//if err := c.File.DeleteFile(); err != nil {
+			//	fmt.Println(err)
+			//}
 			return
 		}
 		c.Transfering = false // stop reading packets

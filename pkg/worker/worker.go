@@ -16,7 +16,7 @@ import (
 
 const (
 	TIMEOUT    = 10   // secs
-	CHUNK_SIZE = 1024 // file chunk bytes
+	CHUNK_SIZE = 1024 // 1k file chunk bytes
 )
 
 type Worker struct {
@@ -55,15 +55,11 @@ func (w *Worker) confirmPacket(hash string) error {
 
 func (w *Worker) sendFilePacket(token *f.Token) {
 
-	block := token.Index + CHUNK_SIZE
-
-	if block > w.File.Size {
-		block = w.File.Size
-	}
+	chunk := w.File.ReadChunk(token.Index, CHUNK_SIZE)
 
 	chunkBuffer, _ := pb.Marshal(
 		&msg.FileChunk{
-			Chunk: w.File.Buffer[token.Index:block],
+			Chunk: chunk,
 			Token: f.TokenHash(token.Index),
 		},
 	)
@@ -105,24 +101,27 @@ func (w *Worker) resendLastPacket(hash string) {
 	slog.Info("re-sending packet", "address", w.Addr.String(), "token", w.File.CheckSum)
 }
 
-func (w *Worker) tokenizeFile(buffer []byte) {
-	size := len(buffer)
+func (w *Worker) tokenizeFile(file *os.File) {
 
-	w.File.Buffer = buffer
-	w.File.Size = size
+	stat, _ := file.Stat()
+
+	w.File.File = file
+	w.File.Size = int(stat.Size())
 	w.File.Tokens = []*f.Token{}
 
-	for i := 0; i < size; i += CHUNK_SIZE {
+	for i := 0; i < w.File.Size; i += CHUNK_SIZE {
 		w.File.PushToken(i, false)
 	}
 }
 
-func (w *Worker) readFile(buffer []byte) ([]byte, msg.Result, error) {
+func (w *Worker) readFile(buffer []byte) (*os.File, msg.Result, error) {
 	request := msg.RequestFile{}
+	fmt.Println(string(buffer))
 	if err := pb.Unmarshal(buffer, &request); err != nil {
 		return nil, msg.Result_INVALID_PACKET_FORMAT, err
 	}
-	fBuffer, err := os.ReadFile(request.FilePath)
+
+	f, err := os.OpenFile(request.FilePath, os.O_RDONLY, 0644)
 	if err != nil {
 		return nil, msg.Result_FILE_NOT_FOUND, err
 	}
@@ -134,12 +133,13 @@ func (w *Worker) readFile(buffer []byte) ([]byte, msg.Result, error) {
 	slog.Info("generated file checksum", "address", w.Addr.String(), "file", request.FilePath, "sha256sum", sha256)
 	w.File.CheckSum = sha256
 
-	return fBuffer, msg.Result_OK, nil
+	return f, msg.Result_OK, nil
 }
 
 func (w *Worker) Execute() {
 	defer func() {
 		close(w.PacketChannel)
+		w.File.Close()
 		w.Done = true // jobs is done
 	}()
 
@@ -156,11 +156,11 @@ func (w *Worker) Execute() {
 			//fmt.Println("packet: ", buffer)
 			switch int(buffer[0]) {
 			case int(msg.Verb_REQUEST):
-				fileBuffer, result, err := w.readFile(buffer[1:]) // skip identification byte
+				file, result, err := w.readFile(buffer[1:]) // skip identification byte
 				// server errors
 				switch result {
 				case msg.Result_INVALID_PACKET_FORMAT:
-					slog.Error("failed to decode buffer as protobuf message", "address", w.Addr.String(), "error", err)
+					slog.Error("failed request to decode buffer as protobuf message", "address", w.Addr.String(), "error", err)
 					w.sendConfirmationPacket(result, "")
 					return // exit worker
 
@@ -176,7 +176,7 @@ func (w *Worker) Execute() {
 
 				case msg.Result_OK:
 					slog.Info("start sending all file chunks packets", "address", w.Addr.String())
-					w.tokenizeFile(fileBuffer)
+					w.tokenizeFile(file)
 					go w.sendFile() // start sending file chunks
 					break
 				default:
@@ -186,7 +186,7 @@ func (w *Worker) Execute() {
 			case int(msg.Verb_CONFIRMATION):
 				confirm := msg.Confirmation{}
 				if err := pb.Unmarshal(buffer[1:], &confirm); err != nil {
-					slog.Error("failed to decode buffer as protobuf message", "address", w.Addr.String(), "error", err)
+					slog.Error("failed confirmation to decode buffer as protobuf message", "address", w.Addr.String(), "error", err)
 					w.sendConfirmationPacket(msg.Result_INVALID_PACKET_FORMAT, "")
 					return // exit worker
 				}
@@ -200,7 +200,7 @@ func (w *Worker) Execute() {
 						slog.Error("cannot confirm packet, failed to find token hash", "address", w.Addr.String(), "token", confirm.Token, "error", err)
 						w.sendConfirmationPacket(msg.Result_INVALID_TOKEN, confirm.Token)
 					}
-					//slog.Info("received packet", "address", w.Addr.String(), "token", confirm.Token)
+					slog.Info("received packet", "address", w.Addr.String(), "token", confirm.Token)
 					break
 				case msg.Result_PACKET_MISS:
 					w.resendLastPacket(confirm.Token)
