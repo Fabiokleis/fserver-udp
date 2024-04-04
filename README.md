@@ -15,11 +15,13 @@ Check [protobuf file](./messages.proto) to known which type data are encoded.
   2 -> CONFIRMATION // result
   ...1024 bytes -> Protobuf encoded data
 
-  Client packet: [Header|Protobuf...] 32 bytes
+  Client packet: [Header|Protobuf...] 256 bytes
   header byte types:
   0 -> REQUEST      // file
   2 -> CONFIRMATION // result
-  ...31 bytes -> Protobuf encoded data
+  ...256 bytes -> Protobuf encoded data
+
+  file name length should be less or equal 200 bytes
 ```
 
 ## Client
@@ -61,3 +63,4 @@ start udp server by running:
 ```shell
 go run ./cmd/fserver-udp/main.go
 ```
+

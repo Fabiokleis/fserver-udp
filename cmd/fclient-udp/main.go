@@ -18,6 +18,11 @@ const (
 	MAX_TIMEOUT        = 1
 )
 
+/*
+   easy fixed size file
+   head -c 10M </dev/urandom > myfile
+*/
+
 func main() {
 
 	bind := flag.String("bind", "", "file server host:port")
@@ -33,6 +38,11 @@ func main() {
 
 	if *file == "" {
 		fmt.Println("missing `--file` flag")
+		os.Exit(1)
+	}
+
+	if len(*file) > 200 {
+		fmt.Println("file name too long")
 		os.Exit(1)
 	}
 

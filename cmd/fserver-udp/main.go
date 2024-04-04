@@ -10,7 +10,7 @@ import (
 
 const (
 	UDP_BIND_ADDRESS = "0.0.0.0:2224"
-	MAX_PACKET_SIZE  = 32 // client only send short messages
+	MAX_PACKET_SIZE  = 256 // client only send short messages, file name length <= 200
 )
 
 type Server struct {
