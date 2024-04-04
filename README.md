@@ -34,8 +34,7 @@ messages types are described in [protobuf file](./messages.proto), so every prog
 buffers compiler could be a client.
 
 ## Communication flow
-![flux](https://github.com/Fabiokleis/fserver-udp/assets/66813406/b078467e-ee14-4a44-8fc0-e47ff57fff95)
-
+![flux](https://github.com/Fabiokleis/fserver-udp/assets/66813406/28ad3b7d-0b9d-48da-bc71-36b4890249b4)
 
 ## Docker
 to build and test easilly just run:
