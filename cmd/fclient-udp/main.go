@@ -15,7 +15,7 @@ import (
 const (
 	UDP_SERVER_ADDRESS = "0.0.0.0:2224"
 	MAX_PACKET_SIZE    = 1100 // 1024 file chunk + proto encoding + safety
-	MAX_TIMEOUT        = 1
+	MAX_TIMEOUT        = 3
 )
 
 /*
