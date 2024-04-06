@@ -4,6 +4,8 @@ udp file server, transfer files over udp socket.
 this project uses protobuf to encode and decode messages: https://protobuf.dev/
 see golang implementation in https://pkg.go.dev/google.golang.org/protobuf
 
+*obs: acho q protobuf para encodar e decodar cada pacote nao foi uma boa ideia*
+
 ## Protocol
 
 The protocol are divided in two sections, first byte is reserved to the packet identification byte, next bytes are reserved for data.
