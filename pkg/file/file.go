@@ -82,6 +82,17 @@ func (tF *TokenizableFile) FindNotReceivedToken() *Token {
 	return nil
 }
 
+func (tF *TokenizableFile) LastReceivedToken() *Token {
+
+	for i := len(tF.Tokens) - 1; i >= 0; i-- {
+		if tF.Tokens[i].Received {
+			return tF.Tokens[i]
+		}
+	}
+
+	return nil
+}
+
 func (tF *TokenizableFile) PushToken(idx int, received bool) {
 	tF.Tokens = append(tF.Tokens, &Token{Index: idx, Received: received})
 }

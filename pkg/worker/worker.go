@@ -188,7 +188,7 @@ func (w *Worker) Execute() {
 				if err := pb.Unmarshal(buffer[1:], &confirm); err != nil {
 					slog.Error("failed confirmation to decode buffer as protobuf message", "address", w.Addr.String(), "error", err)
 					w.sendConfirmationPacket(msg.Result_INVALID_PACKET_FORMAT, "")
-					return // exit worker
+					break
 				}
 				// reset timer to wait next confirmation messages
 				timer.Reset(time.Duration(TIMEOUT) * time.Second)
@@ -197,10 +197,11 @@ func (w *Worker) Execute() {
 				case msg.Result_OK:
 					w.Waiting = false // stop waiting confirmation packet
 					if err := w.confirmPacket(confirm.Token); err != nil {
-						slog.Error("cannot confirm packet, failed to find token hash", "address", w.Addr.String(), "token", confirm.Token, "error", err)
+						//slog.Error("cannot confirm packet, failed to find token hash", "address", w.Addr.String(), "token", confirm.Token, "error", err)
 						w.sendConfirmationPacket(msg.Result_INVALID_TOKEN, confirm.Token)
+						break
 					}
-					slog.Info("received packet", "address", w.Addr.String(), "token", confirm.Token)
+					//slog.Info("received packet", "address", w.Addr.String(), "token", confirm.Token)
 					break
 				case msg.Result_PACKET_MISS:
 					w.resendLastPacket(confirm.Token)

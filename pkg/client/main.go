@@ -93,17 +93,26 @@ func (c *Client) verifyConfirmation(confirm *msg.Confirmation) {
 	case msg.Result_VALID_CHECKSUM:
 		if err := c.validateCheckSum(confirm.Token); err != nil {
 			fmt.Println(err)
-			//if err := c.File.DeleteFile(); err != nil {
-			//	fmt.Println(err)
-			//}
+			if err := c.File.DeleteFile(); err != nil {
+				fmt.Println(err)
+			}
 			return
 		}
+
 		c.Transfering = false // stop reading packets
 		fmt.Println("sha256 checksum", c.File.CheckSum)
 		fmt.Println("file transfering succeed")
 
 		break
 	case msg.Result_OK, msg.Result_INVALID_PACKET_FORMAT:
+		token := c.File.LastReceivedToken()
+		if token != nil {
+			c.sendConfirmationPacket(
+				msg.Result_OK,
+				f.TokenHash(token.Index),
+			)
+			fmt.Println("re-sending confirmation token")
+		}
 	default:
 		break
 	}
@@ -136,6 +145,7 @@ func (c *Client) KeepCheckingServer(miss bool, missed int) {
 			break
 		case packet := <-c.PacketChannel:
 
+			//fmt.Println("packet: ", packet)
 			timer.Reset(time.Duration(RESEND_MAX_TIME) * time.Second)
 
 			if miss {
