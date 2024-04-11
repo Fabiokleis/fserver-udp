@@ -60,12 +60,16 @@ func (c *Client) readFileChunkPacket(buffer []byte) (*msg.FileChunk, error) {
 		return nil, err
 	}
 
-	idx, err := strconv.Atoi(strings.Split(fileChunk.Token, "_")[2])
+	idx, err := strconv.ParseUint(strings.Split(fileChunk.Token, "_")[2], 10, 32)
 
 	if err != nil {
 		return nil, err
 	}
 
+	if c.File.FindToken(fileChunk.Token) != nil {
+		c.sendConfirmationPacket(msg.Result_OK, fileChunk.Token)
+		return &fileChunk, fmt.Errorf("already wrote file chunk, skipping")
+	}
 	c.File.PushToken(idx, true)
 	c.File.WriteChunk(fileChunk.Chunk)
 
@@ -93,12 +97,12 @@ func (c *Client) verifyConfirmation(confirm *msg.Confirmation) {
 	case msg.Result_VALID_CHECKSUM:
 		if err := c.validateCheckSum(confirm.Token); err != nil {
 			fmt.Println(err)
-			if err := c.File.DeleteFile(); err != nil {
-				fmt.Println(err)
-			}
+			//if err := c.File.DeleteFile(); err != nil {
+			//	fmt.Println(err)
+			//}
+			c.Transfering = false // stop reading packets
 			return
 		}
-
 		c.Transfering = false // stop reading packets
 		fmt.Println("sha256 checksum", c.File.CheckSum)
 		fmt.Println("file transfering succeed")

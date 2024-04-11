@@ -5,19 +5,19 @@ import (
 	"os"
 )
 
-func TokenHash(idx int) string {
+func TokenHash(idx uint64) string {
 	return fmt.Sprintf("token_idx_%d", idx)
 }
 
 type Token struct {
-	Index    int
+	Index    uint64
 	Received bool
 }
 
 type TokenizableFile struct {
 	FileName string
 	File     *os.File // file
-	Size     int      // file content amount of bytes
+	Size     uint64   // file content amount of bytes
 	Tokens   []*Token // tokenized indexes
 	CheckSum string   // file checksum
 }
@@ -51,7 +51,7 @@ func (tF *TokenizableFile) Path() string {
 	return tF.File.Name()
 }
 
-func (tF *TokenizableFile) ReadChunk(offset int, chunkSize int) []byte {
+func (tF *TokenizableFile) ReadChunk(offset uint64, chunkSize uint64) []byte {
 	chunk := make([]byte, chunkSize)
 
 	n, _ := tF.File.ReadAt(chunk, int64(offset))
@@ -60,7 +60,7 @@ func (tF *TokenizableFile) ReadChunk(offset int, chunkSize int) []byte {
 }
 
 func (tF *TokenizableFile) WriteChunk(chunk []byte) {
-	tF.Size += len(chunk)
+	tF.Size += uint64(len(chunk))
 	tF.File.Write(chunk)
 }
 
@@ -93,6 +93,6 @@ func (tF *TokenizableFile) LastReceivedToken() *Token {
 	return nil
 }
 
-func (tF *TokenizableFile) PushToken(idx int, received bool) {
+func (tF *TokenizableFile) PushToken(idx uint64, received bool) {
 	tF.Tokens = append(tF.Tokens, &Token{Index: idx, Received: received})
 }

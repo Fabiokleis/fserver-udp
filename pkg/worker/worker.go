@@ -15,8 +15,8 @@ import (
 )
 
 const (
-	TIMEOUT    = 10   // secs
-	CHUNK_SIZE = 1024 // 1k file chunk bytes
+	TIMEOUT           = 10   // secs
+	CHUNK_SIZE uint64 = 1024 // 1k file chunk bytes
 )
 
 type Worker struct {
@@ -106,10 +106,11 @@ func (w *Worker) tokenizeFile(file *os.File) {
 	stat, _ := file.Stat()
 
 	w.File.File = file
-	w.File.Size = int(stat.Size())
+	w.File.Size = uint64(stat.Size())
 	w.File.Tokens = []*f.Token{}
 
-	for i := 0; i < w.File.Size; i += CHUNK_SIZE {
+	var i uint64
+	for i = 0; i <= w.File.Size; i += CHUNK_SIZE {
 		w.File.PushToken(i, false)
 	}
 }
@@ -197,7 +198,7 @@ func (w *Worker) Execute() {
 				case msg.Result_OK:
 					w.Waiting = false // stop waiting confirmation packet
 					if err := w.confirmPacket(confirm.Token); err != nil {
-						//slog.Error("cannot confirm packet, failed to find token hash", "address", w.Addr.String(), "token", confirm.Token, "error", err)
+						slog.Error("cannot confirm packet, failed to find token hash", "address", w.Addr.String(), "token", confirm.Token, "error", err)
 						w.sendConfirmationPacket(msg.Result_INVALID_TOKEN, confirm.Token)
 						break
 					}
