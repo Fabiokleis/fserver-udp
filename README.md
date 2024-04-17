@@ -6,6 +6,8 @@ see golang implementation in https://pkg.go.dev/google.golang.org/protobuf
 
 *obs: acho q protobuf para encodar e decodar cada pacote nao foi uma boa ideia*
 
+apresentação yt: https://www.youtube.com/watch?v=9T7bCWwy4N0
+
 ## Protocol
 
 The protocol are divided in two sections, first byte is reserved to the packet identification byte, next bytes are reserved for data.
