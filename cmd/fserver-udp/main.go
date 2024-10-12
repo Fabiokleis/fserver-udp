@@ -18,20 +18,6 @@ type Server struct {
 	Workers map[string]*w.Worker
 }
 
-func (s *Server) monitor() {
-	for {
-		s.mu.Lock()
-		for addr, worker := range s.Workers {
-			if worker.Done {
-				delete(s.Workers, addr)
-				slog.Info("exiting worker", "address", addr)
-			}
-		}
-		s.mu.Unlock()
-
-	}
-}
-
 func (s *Server) sendPacket(addr string, packet []byte) bool {
 	s.mu.Lock()
 	if w, ok := s.Workers[addr]; ok {
@@ -43,16 +29,30 @@ func (s *Server) sendPacket(addr string, packet []byte) bool {
 	return false
 }
 
-func (s *Server) addWorker(worker w.Worker, packet []byte) {
+func (s *Server) addWorker(workersAddr chan string, packet []byte, worker w.Worker) {
 	s.mu.Lock()
 
 	s.Workers[worker.Addr.String()] = &worker
 
 	// start a new worker
-	go worker.Execute()
+	go worker.Execute(workersAddr)
 	worker.PacketChannel <- packet
 
 	s.mu.Unlock()
+}
+
+func (s *Server) monitor(workersAddr chan string) {
+	for {
+		select {
+		case addr := <- workersAddr:
+			s.mu.Lock()
+			if worker, ok := s.Workers[addr]; ok && worker.Done {
+				delete(s.Workers, addr)
+				slog.Info("exiting worker", "address", addr)
+			}	
+			s.mu.Unlock()
+		}
+	}
 }
 
 func server(socket *net.UDPConn) {
@@ -63,7 +63,8 @@ func server(socket *net.UDPConn) {
 		Workers: map[string]*w.Worker{},
 	}
 
-	go server.monitor()
+	workersAddr := make(chan string)
+	go server.monitor(workersAddr)
 
 	packet := make([]byte, MAX_PACKET_SIZE)
 	for {
@@ -74,13 +75,17 @@ func server(socket *net.UDPConn) {
 		}
 
 		if !server.sendPacket(addr.String(), packet[:n]) {
-			server.addWorker(w.Worker{
-				Socket:        socket,
-				Addr:          addr,
-				PacketChannel: make(chan []byte),
-				Waiting:       false,
-				Done:          false,
-			}, packet[:n])
+			server.addWorker(
+				workersAddr,
+				packet[:n],
+				w.Worker{
+					Socket:        socket,
+					Addr:          addr,
+					PacketChannel: make(chan []byte),
+					Waiting:       false,
+					Done:          false,
+				},
+			)
 		}
 	}
 }
