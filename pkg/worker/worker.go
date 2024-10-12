@@ -25,7 +25,7 @@ type Worker struct {
 	PacketChannel chan []byte       // server packet message
 	File          f.TokenizableFile // Tokenized file
 	Waiting       bool              // control confirmation packets
-	Done          bool              // to stop executing
+	Done          bool              // working control
 }
 
 func (w *Worker) sendConfirmationPacket(result msg.Result, token string) {
@@ -137,11 +137,12 @@ func (w *Worker) readFile(buffer []byte) (*os.File, msg.Result, error) {
 	return f, msg.Result_OK, nil
 }
 
-func (w *Worker) Execute() {
+func (w *Worker) Execute(killys chan string) {
 	defer func() {
 		close(w.PacketChannel)
 		w.File.Close()
-		w.Done = true // jobs is done
+		w.Done = true
+		killys <- w.Addr.String()
 	}()
 
 	slog.Info("executing worker", "address", w.Addr.String())
@@ -202,14 +203,14 @@ func (w *Worker) Execute() {
 						w.sendConfirmationPacket(msg.Result_INVALID_TOKEN, confirm.Token)
 						break
 					}
-					//slog.Info("received packet", "address", w.Addr.String(), "token", confirm.Token)
+					slog.Info("received packet", "address", w.Addr.String(), "token", confirm.Token)
 					break
 				case msg.Result_PACKET_MISS:
 					w.resendLastPacket(confirm.Token)
 					break
 				case msg.Result_VALID_CHECKSUM:
-					slog.Info("checksum validation worked", "address", w.Addr.String())
-					return // just stop working
+					slog.Info("checksum validation worked", "address", w.Addr.String()) // w.Addr.String()
+					return                                                                // just stop working
 				default:
 					return // wtf
 				}

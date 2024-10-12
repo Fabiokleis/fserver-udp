@@ -97,9 +97,9 @@ func (c *Client) verifyConfirmation(confirm *msg.Confirmation) {
 	case msg.Result_VALID_CHECKSUM:
 		if err := c.validateCheckSum(confirm.Token); err != nil {
 			fmt.Println(err)
-			//if err := c.File.DeleteFile(); err != nil {
-			//	fmt.Println(err)
-			//}
+			if err := c.File.DeleteFile(); err != nil {
+				fmt.Println(err)
+			}
 			c.Transfering = false // stop reading packets
 			return
 		}
